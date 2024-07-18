@@ -3,7 +3,7 @@ package org.esgi.project.streaming.models
 import play.api.libs.json.{Json, OFormat}
 
 case class Views(
-  id: String,
+  id: Int,
   title: String,
   view_category: String
 )

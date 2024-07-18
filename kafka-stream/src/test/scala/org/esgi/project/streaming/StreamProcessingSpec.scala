@@ -18,14 +18,14 @@ import scala.jdk.CollectionConverters._
 class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
   test("Topology Count Views"){
     val views = List(
-      Views("1","movie1", "half_view"),
-      Views("2","movie2", "full"),
-      Views("3","movie3", "start_only"),
-      Views("1","movie1", "half_view"),
-      Views("3","movie3", "half_view"),
-      Views("2","movie2", "full"),
-      Views("2","movie2", "half_view"),
-      Views("2","movie2", "full")
+      Views(1,"movie1", "half_view"),
+      Views(2,"movie2", "full"),
+      Views(3,"movie3", "start_only"),
+      Views(1,"movie1", "half_view"),
+      Views(3,"movie3", "half_view"),
+      Views(2,"movie2", "full"),
+      Views(2,"movie2", "half_view"),
+      Views(2,"movie2", "full")
     )
 
 
@@ -37,13 +37,13 @@ class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
     val countViewsTopic = topologyTestDriver
       .createInputTopic(
         StreamProcessing.viewsTopic,
-        Serdes.stringSerde.serializer(),
+        Serdes.intSerde.serializer(),
         toSerializer[Views]
       )
 
-    val countViewsStore: KeyValueStore[String, Long] =
+    val countViewsStore: KeyValueStore[Int, Long] =
       topologyTestDriver
-        .getKeyValueStore[String, Long](
+        .getKeyValueStore[Int, Long](
           StreamProcessing.countViewsStoreName
         )
 
@@ -51,17 +51,17 @@ class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
       views.map(view => new TestRecord(view.id, view)).asJava
     )
 
-    assert(countViewsStore.get("1") == 2)
-    assert(countViewsStore.get("2") == 4)
-    assert(countViewsStore.get("3") == 2)
+    assert(countViewsStore.get(1) == 2)
+    assert(countViewsStore.get(2) == 4)
+    assert(countViewsStore.get(3) == 2)
 
   }
 
   test("Topology Avg Likes"){
     val likes = List(
-      Likes("1", 3.5),
-      Likes("1", 4.5),
-      Likes("2", 3)
+      Likes(1, 3.5),
+      Likes(1, 4.5),
+      Likes(2, 3)
     )
 
 
@@ -73,13 +73,13 @@ class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
     val avgLikeTopic = topologyTestDriver
       .createInputTopic(
         StreamProcessing.likesTopic,
-        Serdes.stringSerde.serializer(),
+        Serdes.intSerde.serializer(),
         toSerializer[Likes]
       )
 
-    val avgLikeStore: KeyValueStore[String, LikesAvg] =
+    val avgLikeStore: KeyValueStore[Int, LikesAvg] =
       topologyTestDriver
-        .getKeyValueStore[String, LikesAvg](
+        .getKeyValueStore[Int, LikesAvg](
           StreamProcessing.likesAvgStoreName
         )
 
@@ -87,23 +87,23 @@ class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
       likes.map(like => new TestRecord(like.id, like)).asJava
     )
 
-    assert(avgLikeStore.get("1").avg == 4)
-    assert(avgLikeStore.get("2").avg == 3)
+    assert(avgLikeStore.get(1).avg == 4)
+    assert(avgLikeStore.get(2).avg == 3)
 
   }
 
   test("Topology view per category per minute"){
     val viewsNow = List(
-      Views("1","movie1", "half_view"),
-      Views("2","movie2", "full"),
-      Views("3","movie3", "start_only"),
-      Views("1","movie1", "half_view"),
+      Views(1,"movie1", "half_view"),
+      Views(2,"movie2", "full"),
+      Views(3,"movie3", "start_only"),
+      Views(1,"movie1", "half_view"),
     )
     val viewSevenAgo = List(
-      Views("3","movie3", "half_view"),
-      Views("2","movie2", "full"),
-      Views("2","movie2", "half_view"),
-      Views("2","movie2", "full")
+      Views(3,"movie3", "half_view"),
+      Views(2,"movie2", "full"),
+      Views(2,"movie2", "half_view"),
+      Views(2,"movie2", "full")
     )
 
 
@@ -115,7 +115,7 @@ class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
     val viewTopic = topologyTestDriver
       .createInputTopic(
         StreamProcessing.viewsTopic,
-        Serdes.stringSerde.serializer(),
+        Serdes.intSerde.serializer(),
         toSerializer[Views]
       )
 

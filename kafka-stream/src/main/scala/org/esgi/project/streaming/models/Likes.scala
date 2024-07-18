@@ -2,9 +2,11 @@ package org.esgi.project.streaming.models
 
 import play.api.libs.json.{Json, OFormat}
 
+import java.util.UUID
+
 case class Likes(
-  id: String,
-  score: Double,
+    id: Int,
+    score: Double,
 )
 
 
