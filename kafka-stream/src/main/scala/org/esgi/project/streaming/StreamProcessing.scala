@@ -4,11 +4,12 @@ import scala.util.Random
 import io.github.azhur.kafka.serde.PlayJsonSupport
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerConfig
+import org.apache.kafka.common.serialization.Serde
 import org.apache.kafka.streams.kstream.{TimeWindows, Windowed}
 import org.apache.kafka.streams.scala._
 import org.apache.kafka.streams.scala.kstream.{KGroupedStream, KTable, Materialized}
 import org.apache.kafka.streams.{KafkaStreams, StreamsConfig}
-import org.esgi.project.streaming.models.Views
+import org.esgi.project.streaming.models.{Likes, LikesAvg, Views}
 
 import java.time.Duration
 import java.util.Properties
@@ -17,6 +18,11 @@ object StreamProcessing extends PlayJsonSupport {
 
   import org.apache.kafka.streams.scala.ImplicitConversions._
   import org.apache.kafka.streams.scala.serialization.Serdes._
+  import org.esgi.project.streaming.models.Likes.format
+  import org.esgi.project.streaming.models.Views.format
+  import io.github.azhur.kafka.serde.PlayJsonSupport._
+
+  implicit val likesSerde: Serde[Likes] = toSerde[Likes]
 
   val applicationName = s"some-application-name"
 
@@ -25,16 +31,17 @@ object StreamProcessing extends PlayJsonSupport {
   // defining processing graph
   val builder: StreamsBuilder = new StreamsBuilder
 
-  val wordTopic = "words"
   val viewsTopic = "views"
+  val likesTopic = "likes"
 
   val countViewsStoreName = "countViews"
+  val countViewsByTypeOfView = "countViewsByTypeOfView"
+  val likesAvgStoreName = "likes-average"
   val viewsPerCategoryPerMinutes = "viewsPerCategoryPerminutes"
-  val wordCountStoreName = "word-count-store"
 
   val views = builder.stream[String, Views](viewsTopic)
-
-  val words = builder.stream[String, String](wordTopic)
+  val likes = builder.stream[String, Likes](likesTopic)
+  val viewsByTypeOfView = builder.stream[String, Views](countViewsByTypeOfView)
 
   val viewsGroupById : KGroupedStream[String, Views] = views
     .groupBy(
@@ -43,6 +50,16 @@ object StreamProcessing extends PlayJsonSupport {
 
   val viewsCount: KTable[String, Long] = viewsGroupById
     .count()(Materialized.as(countViewsStoreName))
+
+  val likesAvg: KTable[String, LikesAvg] = likes
+    .groupBy((_, like) => like.id)
+    .aggregate(
+      initializer = LikesAvg.empty
+    )(
+      aggregator = (_, like, agg) => {
+        agg.increment(like.score)
+      }
+    )(Materialized.as(likesAvgStoreName))
 
   val visitsPerCategoryPerMinute: KTable[Windowed[String], Long] = viewsGroupById.windowedBy(
       TimeWindows.ofSizeWithNoGrace(Duration.ofMinutes(5)).advanceBy(Duration.ofSeconds(1))
@@ -54,12 +71,6 @@ object StreamProcessing extends PlayJsonSupport {
     val chars = input.toCharArray
     random.shuffle(chars.toSeq).mkString
   }
-
-  val wordCounts: KTable[String, Long] = words
-    .flatMapValues(textLine => textLine.toLowerCase.split("\\W+"))
-    .groupBy((_, word) => word)
-    .count()(Materialized.as(wordCountStoreName))
-
 
   def run(): KafkaStreams = {
     val streams: KafkaStreams = new KafkaStreams(builder.build(), props)
