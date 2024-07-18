@@ -7,6 +7,7 @@ import org.apache.kafka.streams.kstream.internals.TimeWindow
 import org.apache.kafka.streams.scala.serialization.Serdes
 import org.apache.kafka.streams.state.{KeyValueStore, WindowStore}
 import org.apache.kafka.streams.test.TestRecord
+import org.esgi.project.streaming.StreamProcessing.viewsTopic
 import org.esgi.project.streaming.models.{Likes, LikesAvg, Views}
 import org.scalatest.funsuite.AnyFunSuite
 
@@ -130,14 +131,13 @@ class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
       viewsNow.map(view => new TestRecord(view.id, view)).asJava
     )
 
+    val now = Instant.now().truncatedTo(ChronoUnit.MINUTES)
+    val plusFive = now.plus(Duration.ofMinutes(5))
+
     viewTopic.pipeRecordList(
-      viewSevenAgo.map(view => new TestRecord(view.id, view, sevenMinutesAgoTimestamp)).asJava
+      viewSevenAgo.map(view => new TestRecord(view.id, view, plusFive)).asJava
     )
 
-
-    val tmp = viewPerCategoryStore.fetchAll(sevenMinutesAgoTimestamp, Instant.now())
-    println(tmp.next().toString)
-
-//    assert(viewPerCategoryStore.fetchAll(sevenMinutesAgoTimestamp, Instant.now()) == 4)
+    assert(viewPerCategoryStore.fetchAll(plusFive, plusFive.plusSeconds(1)).asScala.toList.length == 2)
   }
 }
