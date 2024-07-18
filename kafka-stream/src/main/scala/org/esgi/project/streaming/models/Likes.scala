@@ -3,10 +3,9 @@ package org.esgi.project.streaming.models
 import play.api.libs.json.{Json, OFormat}
 
 case class Likes(
-  id: String,
-  score: String
+  id: Int,
+  score: Float,
 )
-
 
 
 object Likes {
