@@ -38,12 +38,17 @@ object StreamProcessing extends PlayJsonSupport {
 
   val views = builder.stream[String, Views](viewsTopic)
   val likes = builder.stream[String, Likes](likesTopic)
-  val viewsByTypeOfView = builder.stream[String, Views](countViewsByTypeOfView)
+
 
   val viewsGroupById : KGroupedStream[String, Views] = views
     .groupBy(
     (_, view) => view.id
   )
+
+  val viewsGroupByCategory : KGroupedStream[String, Views] = views
+    .groupBy(
+      (_, view) => view.view_category
+    )
 
   val viewsCount: KTable[String, Long] = viewsGroupById
     .count()(Materialized.as(countViewsStoreName))
@@ -58,7 +63,7 @@ object StreamProcessing extends PlayJsonSupport {
       }
     )(Materialized.as(likesAvgStoreName))
 
-  val viewPerCategoryPerMinute: KTable[Windowed[String], Long] = viewsGroupById.windowedBy(
+  val viewPerCategoryPerMinute: KTable[Windowed[String], Long] = viewsGroupByCategory.windowedBy(
       TimeWindows.ofSizeWithNoGrace(Duration.ofMinutes(5)).advanceBy(Duration.ofSeconds(1))
     )
     .count()(Materialized.as(viewsPerCategoryPerMinutes))
