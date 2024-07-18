@@ -1,5 +1,6 @@
 package org.esgi.project.streaming
 
+import scala.util.Random
 import io.github.azhur.kafka.serde.PlayJsonSupport
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerConfig
@@ -24,18 +25,39 @@ object StreamProcessing extends PlayJsonSupport {
 
   val wordTopic = "words"
   val viewsTopic = "views"
-  val likesTopic = "likes"
 
-  val topViewsStoreName = "topViews"
-  val worstViewsStoreName = "worstViews"
+  val countViewsStoreName = "countViews"
+  val countViewsByTypeOfView = "countViewsByTypeOfView"
   val wordCountStoreName = "word-count-store"
 
   val views = builder.stream[String, Views](viewsTopic)
+  val viewsByTypeOfView = builder.stream[String, Views](countViewsByTypeOfView)
+
   val words = builder.stream[String, String](wordTopic)
 
   val viewsCount: KTable[String, Long] = views
     .groupBy((_, view) => view.id)
-    .count()(Materialized.as(topViewsStoreName))
+    .count()(Materialized.as(countViewsStoreName))
+
+  val categorizedViews: KStream[String, String] = views.mapValues { value =>
+    val view = Json.parse(value).as[Views]
+    Json.stringify(Json.toJson(view.copy(view_category = ViewCategorizer.categorizeView(view))))
+  }
+
+  categorizedViews
+    .groupBy((_, value) => Json.parse(value).as[Views].view_category + "-" + Json.parse(value).as[Views].title)
+    .count()(Materialized.as(overallViewsStoreName))
+
+  categorizedViews
+    .groupBy((_, value) => Json.parse(value).as[Views].view_category + "-" + Json.parse(value).as[Views].title)
+    .windowedBy(TimeWindows.of(Duration.ofMinutes(5)).advanceBy(Duration.ofSeconds(10)))
+    .count()(Materialized.as(recentViewsStoreName))
+
+  def randomizeString(input: String): String = {
+    val random = new Random()
+    val chars = input.toCharArray
+    random.shuffle(chars.toSeq).mkString
+  }
 
   val wordCounts: KTable[String, Long] = words
     .flatMapValues(textLine => textLine.toLowerCase.split("\\W+"))
@@ -58,10 +80,11 @@ object StreamProcessing extends PlayJsonSupport {
 
   // auto loader from properties file in project
   def buildProperties: Properties = {
+    val appName = randomizeString(applicationName)
     val properties = new Properties()
     properties.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092")
-    properties.put(StreamsConfig.CLIENT_ID_CONFIG, applicationName)
-    properties.put(StreamsConfig.APPLICATION_ID_CONFIG, applicationName)
+    properties.put(StreamsConfig.CLIENT_ID_CONFIG, appName)
+    properties.put(StreamsConfig.APPLICATION_ID_CONFIG, appName)
     properties.put(StreamsConfig.STATESTORE_CACHE_MAX_BYTES_CONFIG, "0")
     properties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest")
     properties.put(StreamsConfig.REPLICATION_FACTOR_CONFIG, "-1")
