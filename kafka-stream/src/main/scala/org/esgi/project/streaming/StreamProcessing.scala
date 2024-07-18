@@ -4,11 +4,13 @@ import scala.util.Random
 import io.github.azhur.kafka.serde.PlayJsonSupport
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerConfig
+import org.apache.kafka.streams.kstream.{TimeWindows, Windowed}
 import org.apache.kafka.streams.scala._
-import org.apache.kafka.streams.scala.kstream.{KTable, Materialized}
+import org.apache.kafka.streams.scala.kstream.{KGroupedStream, KTable, Materialized}
 import org.apache.kafka.streams.{KafkaStreams, StreamsConfig}
 import org.esgi.project.streaming.models.Views
 
+import java.time.Duration
 import java.util.Properties
 
 object StreamProcessing extends PlayJsonSupport {
@@ -27,31 +29,25 @@ object StreamProcessing extends PlayJsonSupport {
   val viewsTopic = "views"
 
   val countViewsStoreName = "countViews"
-  val countViewsByTypeOfView = "countViewsByTypeOfView"
+  val viewsPerCategoryPerMinutes = "viewsPerCategoryPerminutes"
   val wordCountStoreName = "word-count-store"
 
   val views = builder.stream[String, Views](viewsTopic)
-  val viewsByTypeOfView = builder.stream[String, Views](countViewsByTypeOfView)
 
   val words = builder.stream[String, String](wordTopic)
 
-  val viewsCount: KTable[String, Long] = views
-    .groupBy((_, view) => view.id)
+  val viewsGroupById : KGroupedStream[String, Views] = views
+    .groupBy(
+    (_, view) => view.id
+  )
+
+  val viewsCount: KTable[String, Long] = viewsGroupById
     .count()(Materialized.as(countViewsStoreName))
 
-  val categorizedViews: KStream[String, String] = views.mapValues { value =>
-    val view = Json.parse(value).as[Views]
-    Json.stringify(Json.toJson(view.copy(view_category = ViewCategorizer.categorizeView(view))))
-  }
-
-  categorizedViews
-    .groupBy((_, value) => Json.parse(value).as[Views].view_category + "-" + Json.parse(value).as[Views].title)
-    .count()(Materialized.as(overallViewsStoreName))
-
-  categorizedViews
-    .groupBy((_, value) => Json.parse(value).as[Views].view_category + "-" + Json.parse(value).as[Views].title)
-    .windowedBy(TimeWindows.of(Duration.ofMinutes(5)).advanceBy(Duration.ofSeconds(10)))
-    .count()(Materialized.as(recentViewsStoreName))
+  val visitsPerCategoryPerMinute: KTable[Windowed[String], Long] = viewsGroupById.windowedBy(
+      TimeWindows.ofSizeWithNoGrace(Duration.ofMinutes(5)).advanceBy(Duration.ofSeconds(1))
+    )
+    .count()(Materialized.as(viewsPerCategoryPerMinutes))
 
   def randomizeString(input: String): String = {
     val random = new Random()
