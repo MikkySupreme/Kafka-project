@@ -7,7 +7,6 @@ import org.apache.kafka.streams.state.KeyValueStore
 import org.apache.kafka.streams.test.TestRecord
 import org.esgi.project.streaming.models.{Likes, LikesAvg, Views}
 import org.scalatest.funsuite.AnyFunSuite
-import play.api.libs.json.Json
 
 import scala.jdk.CollectionConverters._
 

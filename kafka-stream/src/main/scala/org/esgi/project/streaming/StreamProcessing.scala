@@ -18,9 +18,6 @@ object StreamProcessing extends PlayJsonSupport {
 
   import org.apache.kafka.streams.scala.ImplicitConversions._
   import org.apache.kafka.streams.scala.serialization.Serdes._
-  import org.esgi.project.streaming.models.Likes.format
-  import org.esgi.project.streaming.models.Views.format
-  import io.github.azhur.kafka.serde.PlayJsonSupport._
 
   implicit val likesSerde: Serde[Likes] = toSerde[Likes]
 
