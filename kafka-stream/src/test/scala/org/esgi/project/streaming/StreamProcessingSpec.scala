@@ -30,26 +30,26 @@ class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
       StreamProcessing.buildProperties
     )
 
-    val bestOfViewsTopic = topologyTestDriver
+    val countViewsTopic = topologyTestDriver
       .createInputTopic(
         StreamProcessing.viewsTopic,
         Serdes.stringSerde.serializer(),
         toSerializer[Views]
       )
 
-    val bestOfViewsStore: KeyValueStore[String, Long] =
+    val countViewsStore: KeyValueStore[String, Long] =
       topologyTestDriver
         .getKeyValueStore[String, Long](
           StreamProcessing.countViewsStoreName
         )
 
-    bestOfViewsTopic.pipeRecordList(
+   countViewsTopic.pipeRecordList(
       views.map(view => new TestRecord(view.id, view)).asJava
     )
 
-    assert(bestOfViewsStore.get("1") == 2)
-    assert(bestOfViewsStore.get("2") == 4)
-    assert(bestOfViewsStore.get("3") == 2)
+    assert(countViewsStore.get("1") == 2)
+    assert(countViewsStore.get("2") == 4)
+    assert(countViewsStore.get("3") == 2)
 
   }
 
