@@ -37,7 +37,7 @@ class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
         toSerializer[Views]
       )
 
-    val bestOfViewsStore: KeyValueStore[String, Long] =
+    val countViewsStore: KeyValueStore[String, Long] =
       topologyTestDriver
         .getKeyValueStore[String, Long](
           StreamProcessing.countViewsStoreName
