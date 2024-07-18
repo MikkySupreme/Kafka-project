@@ -58,7 +58,7 @@ object StreamProcessing extends PlayJsonSupport {
       }
     )(Materialized.as(likesAvgStoreName))
 
-  val visitsPerCategoryPerMinute: KTable[Windowed[String], Long] = viewsGroupById.windowedBy(
+  val viewPerCategoryPerMinute: KTable[Windowed[String], Long] = viewsGroupById.windowedBy(
       TimeWindows.ofSizeWithNoGrace(Duration.ofMinutes(5)).advanceBy(Duration.ofSeconds(1))
     )
     .count()(Materialized.as(viewsPerCategoryPerMinutes))

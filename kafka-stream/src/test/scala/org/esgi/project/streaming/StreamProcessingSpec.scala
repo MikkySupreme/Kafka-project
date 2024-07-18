@@ -2,12 +2,16 @@ package org.esgi.project.streaming
 
 import io.github.azhur.kafka.serde.PlayJsonSupport
 import org.apache.kafka.streams.TopologyTestDriver
+import org.apache.kafka.streams.kstream.Windowed
+import org.apache.kafka.streams.kstream.internals.TimeWindow
 import org.apache.kafka.streams.scala.serialization.Serdes
-import org.apache.kafka.streams.state.KeyValueStore
+import org.apache.kafka.streams.state.{KeyValueStore, WindowStore}
 import org.apache.kafka.streams.test.TestRecord
 import org.esgi.project.streaming.models.{Likes, LikesAvg, Views}
 import org.scalatest.funsuite.AnyFunSuite
 
+import java.time.temporal.ChronoUnit
+import java.time.{Duration, Instant}
 import scala.jdk.CollectionConverters._
 
 class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
@@ -85,5 +89,55 @@ class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
     assert(avgLikeStore.get("1").avg == 4)
     assert(avgLikeStore.get("2").avg == 3)
 
+  }
+
+  test("Topology view per category per minute"){
+    val viewsNow = List(
+      Views("1","movie1", "half_view"),
+      Views("2","movie2", "full"),
+      Views("3","movie3", "start_only"),
+      Views("1","movie1", "half_view"),
+    )
+    val viewSevenAgo = List(
+      Views("3","movie3", "half_view"),
+      Views("2","movie2", "full"),
+      Views("2","movie2", "half_view"),
+      Views("2","movie2", "full")
+    )
+
+
+    val topologyTestDriver = new TopologyTestDriver(
+      StreamProcessing.builder.build(),
+      StreamProcessing.buildProperties
+    )
+
+    val viewTopic = topologyTestDriver
+      .createInputTopic(
+        StreamProcessing.viewsTopic,
+        Serdes.stringSerde.serializer(),
+        toSerializer[Views]
+      )
+
+    val viewPerCategoryStore: WindowStore[String, Long] =
+      topologyTestDriver
+        .getWindowStore[String, Long](
+          StreamProcessing.viewsPerCategoryPerMinutes
+        )
+
+    val sevenMinutesAgoTimestamp = Instant.now().minus(7, ChronoUnit.MINUTES)
+
+    viewTopic.pipeRecordList(
+      viewsNow.map(view => new TestRecord(view.id, view)).asJava
+    )
+
+    viewTopic.pipeRecordList(
+      viewSevenAgo.map(view => new TestRecord(view.id, view, sevenMinutesAgoTimestamp)).asJava
+    )
+
+
+    val tmp = viewPerCategoryStore.fetchAll(sevenMinutesAgoTimestamp, Instant.now())
+    println(tmp.next().toString)
+
+//    assert(viewPerCategoryStore.fetchAll(sevenMinutesAgoTimestamp, Instant.now()) == 4)
   }
 }
