@@ -47,9 +47,9 @@ class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
       views.map(view => new TestRecord(view.id, view)).asJava
     )
 
-    assert(bestOfViewsStore.get("1") == 2)
-    assert(bestOfViewsStore.get("2") == 4)
-    assert(bestOfViewsStore.get("3") == 2)
+    assert(countViewsStore.get("1") == 2)
+    assert(countViewsStore.get("2") == 4)
+    assert(countViewsStore.get("3") == 2)
 
   }
 
