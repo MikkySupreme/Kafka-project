@@ -30,7 +30,7 @@ class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
       StreamProcessing.buildProperties
     )
 
-    val bestOfViewsTopic = topologyTestDriver
+    val countViewsTopic = topologyTestDriver
       .createInputTopic(
         StreamProcessing.viewsTopic,
         Serdes.stringSerde.serializer(),
@@ -43,7 +43,7 @@ class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
           StreamProcessing.countViewsStoreName
         )
 
-    bestOfViewsTopic.pipeRecordList(
+   countViewsTopic.pipeRecordList(
       views.map(view => new TestRecord(view.id, view)).asJava
     )
 
