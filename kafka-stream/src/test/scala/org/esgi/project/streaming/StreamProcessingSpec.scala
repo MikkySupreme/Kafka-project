@@ -8,7 +8,7 @@ import org.apache.kafka.streams.scala.serialization.Serdes
 import org.apache.kafka.streams.state.{KeyValueStore, WindowStore}
 import org.apache.kafka.streams.test.TestRecord
 import org.esgi.project.streaming.StreamProcessing.viewsTopic
-import org.esgi.project.streaming.models.{Likes, LikesAvg, Views}
+import org.esgi.project.streaming.models.{Likes, LikesAvg, ViewPerCategory, Views}
 import org.scalatest.funsuite.AnyFunSuite
 
 import java.time.temporal.ChronoUnit
@@ -119,9 +119,9 @@ class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
         toSerializer[Views]
       )
 
-    val viewPerCategoryStore: WindowStore[String, Long] =
+    val viewPerCategoryStore: WindowStore[Int, ViewPerCategory] =
       topologyTestDriver
-        .getWindowStore[String, Long](
+        .getWindowStore[Int, ViewPerCategory](
           StreamProcessing.viewsPerCategoryPerMinutes
         )
 

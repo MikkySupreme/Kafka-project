@@ -9,7 +9,7 @@ import org.apache.kafka.streams.kstream.{TimeWindows, Windowed}
 import org.apache.kafka.streams.scala._
 import org.apache.kafka.streams.scala.kstream.{KGroupedStream, KTable, Materialized}
 import org.apache.kafka.streams.{KafkaStreams, StreamsConfig}
-import org.esgi.project.streaming.models.{Likes, LikesAvg, Views}
+import org.esgi.project.streaming.models.{Likes, LikesAvg, ViewPerCategory, Views}
 
 import java.time.Duration
 import java.util.Properties
@@ -69,10 +69,31 @@ object StreamProcessing extends PlayJsonSupport {
       }
     )(Materialized.as(likesAvgStoreName))
 
-  val viewPerCategoryPerMinute: KTable[Windowed[String], Long] = viewsGroupByCategory.windowedBy(
+  val viewPerCategoryPerMinute: KTable[Windowed[Int], ViewPerCategory] = views.groupBy(
+      (_, view) => view.id
+    ).windowedBy(
       TimeWindows.ofSizeWithNoGrace(Duration.ofMinutes(5)).advanceBy(Duration.ofSeconds(1))
     )
-    .count()(Materialized.as(viewsPerCategoryPerMinutes))
+    .aggregate(
+      initializer = ViewPerCategory.empty
+    )(
+      aggregator = (_, view, agg) => {
+        agg.increment(view.view_category)
+      }
+    )(Materialized.as(viewsPerCategoryPerMinutes))
+
+  val viewsPerCategoryTotalStoreName = "viewsPerCategoryTotal"
+  val viewPerCategoryTotal: KTable[Int, ViewPerCategory] = views.groupBy(
+      (_, view) => view.id
+  ).aggregate(
+      initializer = ViewPerCategory.empty
+    )(
+      aggregator = (_, view, agg) => {
+        agg.increment(view.view_category)
+      }
+    )(Materialized.as(viewsPerCategoryTotalStoreName))
+
+
 
   def randomizeString(input: String): String = {
     val random = new Random()
