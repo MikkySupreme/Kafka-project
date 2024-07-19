@@ -9,7 +9,7 @@ import org.apache.kafka.streams.kstream.{TimeWindows, Windowed}
 import org.apache.kafka.streams.scala._
 import org.apache.kafka.streams.scala.kstream.{KGroupedStream, KTable, Materialized}
 import org.apache.kafka.streams.{KafkaStreams, StreamsConfig}
-import org.esgi.project.streaming.models.{Likes, LikesAvg, Views}
+import org.esgi.project.streaming.models.{Likes, LikesAvg, Views, ViewsCount}
 
 import java.time.Duration
 import java.util.Properties
@@ -32,7 +32,6 @@ object StreamProcessing extends PlayJsonSupport {
   val likesTopic = "likes"
 
   val countViewsStoreName = "countViews"
-  val countViewsByTypeOfView = "countViewsByTypeOfView"
   val likesAvgStoreName = "likes-average"
   val viewsPerCategoryPerMinutes = "viewsPerCategoryPerminutes"
 
@@ -92,8 +91,8 @@ object StreamProcessing extends PlayJsonSupport {
     val appName = randomizeString(applicationName)
     val properties = new Properties()
     properties.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092")
-    properties.put(StreamsConfig.CLIENT_ID_CONFIG, appName)
-    properties.put(StreamsConfig.APPLICATION_ID_CONFIG, appName)
+    properties.put(StreamsConfig.CLIENT_ID_CONFIG, applicationName)
+    properties.put(StreamsConfig.APPLICATION_ID_CONFIG, applicationName)
     properties.put(StreamsConfig.STATESTORE_CACHE_MAX_BYTES_CONFIG, "0")
     properties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest")
     properties.put(StreamsConfig.REPLICATION_FACTOR_CONFIG, "-1")
