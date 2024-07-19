@@ -10,8 +10,8 @@ case class Score(
 
 
 // Responses
-case class TenBestScore(
-   aggregation: List[Score]
+case class ScoreList(
+  scores: List[Score]
 )
 
 // Implicits
@@ -20,6 +20,6 @@ object Score {
 }
 
 
-object TenBestScore {
-  implicit val format: OFormat[TenBestScore] = Json.format[TenBestScore]
+object ScoreList {
+  implicit val format: OFormat[ScoreList] = Json.format[ScoreList]
 }

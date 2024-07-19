@@ -11,6 +11,7 @@ case class LikesAvg(
   def increment(score: Double) = this.copy(sum = this.sum + score, count = this.count + 1).computeAvg
 
   def computeAvg: LikesAvg = this.copy(avg = this.sum / this.count)
+
 }
 object LikesAvg {
   implicit val format: OFormat[LikesAvg] = Json.format[LikesAvg]

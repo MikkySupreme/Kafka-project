@@ -8,7 +8,9 @@ import org.apache.kafka.streams.{KafkaStreams, StoreQueryParameters}
 import org.apache.kafka.streams.state.{QueryableStoreTypes, ReadOnlyKeyValueStore}
 import org.esgi.project.api.models._
 import org.esgi.project.streaming.StreamProcessing
-import org.esgi.project.streaming.models.LikesAvg
+import org.esgi.project.streaming.models.{LikesAvg, Views}
+import play.api.libs.json.Json
+
 import scala.jdk.CollectionConverters._
 
 object WebServer extends PlayJsonSupport {
@@ -31,19 +33,59 @@ object WebServer extends PlayJsonSupport {
       },
       path("stats" / "ten" / "best" / "score") {
         get {
-          val store: ReadOnlyKeyValueStore[Int, LikesAvg] = streams.store(
+          val avgStore: ReadOnlyKeyValueStore[Int, LikesAvg] = streams.store(
             StoreQueryParameters.fromNameAndType(
                 StreamProcessing.likesAvgStoreName,
                 QueryableStoreTypes.keyValueStore[Int, LikesAvg]()
               )
           )
 
-          val results = TenBestScore(
-            aggregation = store.all().asScala.map(kv => Score(
-              id = kv.key,
-              title = "Title Placeholder",
-              score = kv.value.avg
-            )).toList
+          val idTitleStore: ReadOnlyKeyValueStore[String, String] = streams.store(
+            StoreQueryParameters.fromNameAndType(
+              StreamProcessing.idTitleStoreName,
+              QueryableStoreTypes.keyValueStore[String, String]()
+            )
+          )
+
+          val results = ScoreList(
+            scores = avgStore.all().asScala.map { case kv =>
+              val title = Option(idTitleStore.get(kv.key.toString)).getOrElse("Unknown Title")
+              Score(
+                id = kv.key,
+                title = title,
+                score = kv.value.avg
+              )
+            }.toList.sortBy(-_.score).take(10)
+          )
+
+          complete(StatusCodes.OK, results)
+        }
+      },
+      path("stats" / "ten" / "worst" / "score") {
+        get {
+          val avgStore: ReadOnlyKeyValueStore[Int, LikesAvg] = streams.store(
+            StoreQueryParameters.fromNameAndType(
+              StreamProcessing.likesAvgStoreName,
+              QueryableStoreTypes.keyValueStore[Int, LikesAvg]()
+            )
+          )
+
+          val idTitleStore: ReadOnlyKeyValueStore[String, String] = streams.store(
+            StoreQueryParameters.fromNameAndType(
+              StreamProcessing.idTitleStoreName,
+              QueryableStoreTypes.keyValueStore[String, String]()
+            )
+          )
+
+          val results = ScoreList(
+            scores = avgStore.all().asScala.map { case kv =>
+              val title = Option(idTitleStore.get(kv.key.toString)).getOrElse("Unknown Title")
+              Score(
+                id = kv.key,
+                title = title,
+                score = kv.value.avg
+              )
+            }.toList.sortBy(+_.score).take(10)
           )
 
           complete(StatusCodes.OK, results)
