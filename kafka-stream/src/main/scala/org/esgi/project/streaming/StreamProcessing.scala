@@ -20,6 +20,8 @@ object StreamProcessing extends PlayJsonSupport {
   import org.apache.kafka.streams.scala.serialization.Serdes._
 
   implicit val likesSerde: Serde[Likes] = toSerde[Likes]
+  implicit val viewsSerde: Serde[Views] = toSerde[Views]
+  implicit val likesAvgSerde: Serde[LikesAvg] = toSerde[LikesAvg]
 
   val applicationName = s"some-application-name"
 
@@ -31,12 +33,16 @@ object StreamProcessing extends PlayJsonSupport {
   val viewsTopic = "views"
   val likesTopic = "likes"
 
+  val idTitleStoreName = "idTitle"
   val countViewsStoreName = "countViews"
   val likesAvgStoreName = "likes-average"
   val viewsPerCategoryPerMinutes = "viewsPerCategoryPerminutes"
 
   val views = builder.stream[String, Views](viewsTopic)
   val likes = builder.stream[String, Likes](likesTopic)
+
+  val titles: KTable[String, String] = views
+    .groupByKey.aggregate("")((_, view, _) => view.title)(Materialized.as(idTitleStoreName))
 
 
   val viewsGroupById : KGroupedStream[Int, Views] = views
@@ -51,6 +57,7 @@ object StreamProcessing extends PlayJsonSupport {
 
   val viewsCount: KTable[Int, Long] = viewsGroupById
     .count()(Materialized.as(countViewsStoreName))
+
 
   val likesAvg: KTable[Int, LikesAvg] = likes
     .groupBy((_, like) => like.id)
