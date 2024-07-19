@@ -145,7 +145,7 @@ object WebServer extends PlayJsonSupport {
             title = title,
             total_view_count = viewCount,
             past = pastCategory,
-            last_five_minutes = window
+            last_five_minutes = window.value
           )
 
           complete(StatusCodes.OK, result)
