@@ -9,7 +9,7 @@ import org.apache.kafka.streams.kstream.{TimeWindows, Windowed}
 import org.apache.kafka.streams.scala._
 import org.apache.kafka.streams.scala.kstream.{KGroupedStream, KTable, Materialized}
 import org.apache.kafka.streams.{KafkaStreams, StreamsConfig}
-import org.esgi.project.streaming.models.{Likes, LikesAvg, Views, ViewsCount}
+import org.esgi.project.streaming.models.{Likes, LikesAvg, Views}
 
 import java.time.Duration
 import java.util.Properties

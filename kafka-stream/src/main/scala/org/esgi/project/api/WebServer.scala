@@ -90,6 +90,65 @@ object WebServer extends PlayJsonSupport {
 
           complete(StatusCodes.OK, results)
         }
+      },
+      path("stats"/"ten"/"best"/"views"){
+        get {
+          val idTitleStore: ReadOnlyKeyValueStore[String, String] = streams.store(
+            StoreQueryParameters.fromNameAndType(
+              StreamProcessing.idTitleStoreName,
+              QueryableStoreTypes.keyValueStore[String, String]()
+            )
+          )
+
+          val countViewStore: ReadOnlyKeyValueStore[Int, Long] = streams.store(
+            StoreQueryParameters.fromNameAndType(
+              StreamProcessing.countViewsStoreName,
+              QueryableStoreTypes.keyValueStore[Int, Long]()
+            )
+          )
+
+          val results = ViewList(
+            views = countViewStore.all().asScala.map { case kv =>
+              val title = Option(idTitleStore.get(kv.key.toString)).getOrElse("Unknown Title")
+              View(
+                id = kv.key,
+                title = title,
+                views = kv.value
+              )
+            }.toList.sortBy(-_.views).take(10)
+          )
+
+          complete(StatusCodes.OK, results)
+        }
+      },
+      path("stats"/"ten"/"worst"/"views") {
+        get {
+          val idTitleStore: ReadOnlyKeyValueStore[String, String] = streams.store(
+            StoreQueryParameters.fromNameAndType(
+              StreamProcessing.idTitleStoreName,
+              QueryableStoreTypes.keyValueStore[String, String]()
+            )
+          )
+
+          val countViewStore: ReadOnlyKeyValueStore[Int, Long] = streams.store(
+            StoreQueryParameters.fromNameAndType(
+              StreamProcessing.countViewsStoreName,
+              QueryableStoreTypes.keyValueStore[Int, Long]()
+            )
+          )
+
+          val results = ViewList(
+            views = countViewStore.all().asScala.map { case kv =>
+              val title = Option(idTitleStore.get(kv.key.toString)).getOrElse("Unknown Title")
+              View(
+                id = kv.key,
+                title = title,
+                views = kv.value
+              )
+            }.toList.sortBy(+_.views).take(10)
+          )
+          complete(StatusCodes.OK, results)
+        }
       }
     )
   }
